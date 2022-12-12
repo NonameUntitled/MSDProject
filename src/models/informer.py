@@ -4,6 +4,157 @@ from models.base import TorchModel
 class Informer(TorchModel, config_name='informer'):
     pass
 
+class GaussianBasisFunctions(object):
+    """Function phi(t) = Gaussian(t; mu, sigma_sq)."""
+    def __init__(self, mu, sigma):
+        self.mu = mu.unsqueeze(0)
+        self.sigma = sigma.unsqueeze(0)
+
+    def __repr__(self):
+        return f"GaussianBasisFunction(mu={self.mu}, sigma={self.sigma})"
+
+    def __len__(self):
+        """Number of basis functions."""
+        return self.mu.size(1)
+
+    def _phi(self, t):
+        # N(t|0,1)
+        return 1. / math.sqrt(2 * math.pi) * torch.exp(-.5 * t**2)
+
+    def _Phi(self, t):
+        return .5 * (1 + torch.erf(t / math.sqrt(2)))
+
+    def _integrate_product_of_gaussians(self, mu, sigma_sq):
+        sigma = torch.sqrt(self.sigma ** 2 + sigma_sq)
+        return self._phi((mu - self.mu) / sigma) / sigma
+
+    def evaluate(self, t):
+        # N(t|mu, sigma)
+        return self._phi((t - self.mu) / self.sigma) / self.sigma
+
+    def batch_evaluate(self, t):
+        t = t.repeat(self.mu.size(0),1) - self.mu.repeat(t.size(0),1).transpose(1,0)
+        return self._phi(t / self.sigma) / self.sigma
+
+    def integrate_t2_times_psi(self, a, b):
+        """Compute integral int_a^b (t**2) * psi(t)."""
+        return (self.mu**2 + self.sigma**2) * (
+            self._Phi((b - self.mu) / self.sigma) - self._Phi((a - self.mu) / self.sigma)
+        ) - (
+            self.sigma * (b + self.mu) * self._phi((b - self.mu) / self.sigma)
+        ) + (
+            self.sigma * (a + self.mu) * self._phi((a - self.mu) / self.sigma)
+        )
+
+    def integrate_t_times_psi(self, a, b):
+        """Compute integral int_a^b t * psi(t)."""
+        return self.mu * (
+            self._Phi((b - self.mu) / self.sigma) - self._Phi((a - self.mu) / self.sigma)
+        ) - self.sigma * (
+            self._phi((b - self.mu) / self.sigma) - self._phi((a - self.mu) / self.sigma)
+        )
+
+    def integrate_psi(self, a, b):
+        """Compute integral int_a^b psi(t)."""
+        return self._Phi((b - self.mu) / self.sigma) - self._Phi((a - self.mu) / self.sigma)
+
+    def integrate_t2_times_psi_gaussian(self, mu, sigma_sq):
+        """Compute integral int N(t; mu, sigma_sq) * t**2 * psi(t)."""
+        S_tilde = self._integrate_product_of_gaussians(mu, sigma_sq)
+        mu_tilde = (
+            self.mu * sigma_sq + mu * self.sigma ** 2
+        ) / (
+            self.sigma ** 2 + sigma_sq
+        )
+        sigma_sq_tilde = ((self.sigma ** 2) * sigma_sq) / (self.sigma ** 2 + sigma_sq)
+        return S_tilde * (mu_tilde ** 2 + sigma_sq_tilde)
+
+    def integrate_t_times_psi_gaussian(self, mu, sigma_sq):
+        """Compute integral int N(t; mu, sigma_sq) * t * psi(t)."""
+        S_tilde = self._integrate_product_of_gaussians(mu, sigma_sq)
+        mu_tilde = (
+            self.mu * sigma_sq + mu * self.sigma ** 2
+        ) / (
+            self.sigma ** 2 + sigma_sq
+        )
+        return S_tilde * mu_tilde
+
+    def integrate_psi_gaussian(self, mu, sigma_sq):
+        """Compute integral int N(t; mu, sigma_sq) * psi(t)."""
+        return self._integrate_product_of_gaussians(mu, sigma_sq)
+
+class ContinuousSoftmaxFunction(torch.autograd.Function):
+
+    @classmethod
+    def _expectation_phi_psi(cls, ctx, mu, sigma_sq):
+        """Compute expectation of phi(t) * psi(t).T under N(mu, sigma_sq)."""
+        num_basis = [len(basis_functions) for basis_functions in ctx.psi]
+        total_basis = sum(num_basis)
+        V = torch.zeros((mu.shape[0], 2, total_basis), dtype=ctx.dtype,device=ctx.device)
+        offsets = torch.cumsum(torch.IntTensor(num_basis).to(ctx.device), dim=0)
+        start = 0
+        for j, basis_functions in enumerate(ctx.psi):
+            V[:, 0, start:offsets[j]] = basis_functions.integrate_t_times_psi_gaussian(mu, sigma_sq)
+            V[:, 1, start:offsets[j]] = basis_functions.integrate_t2_times_psi_gaussian(mu, sigma_sq)
+            start = offsets[j]
+        return V
+
+    @classmethod
+    def _expectation_psi(cls, ctx, mu, sigma_sq):
+        """Compute expectation of psi under N(mu, sigma_sq)."""
+        num_basis = [len(basis_functions) for basis_functions in ctx.psi]
+        total_basis = sum(num_basis)
+        r = torch.zeros(mu.shape[0], total_basis, dtype=ctx.dtype, device=ctx.device)
+        offsets = torch.cumsum(torch.IntTensor(num_basis).to(ctx.device), dim=0)
+        start = 0
+        for j, basis_functions in enumerate(ctx.psi):
+            r[:, start:offsets[j]] = basis_functions.integrate_psi_gaussian(mu, sigma_sq)
+            start = offsets[j]
+        return r
+
+    @classmethod
+    def _expectation_phi(cls, ctx, mu, sigma_sq):
+        """Compute expectation of phi under N(mu, sigma_sq)."""
+        v = torch.zeros(mu.shape[0], 2, dtype=ctx.dtype, device=ctx.device)
+        v[:, 0] = mu.squeeze(1)
+        v[:, 1] = (mu**2 + sigma_sq).squeeze(1)
+        return v
+
+    @classmethod
+    def forward(cls, ctx, theta, psi):
+        # We assume a Gaussian.
+        # We have:
+        # theta = [mu/sigma**2, -1/(2*sigma**2)],
+        # phi(t) = [t, t**2],
+        # p(t) = Gaussian(t; mu, sigma**2).
+        ctx.dtype = theta.dtype
+        ctx.device = theta.device
+        ctx.psi = psi
+        sigma_sq = (-.5 / theta[:, 1]).unsqueeze(1)
+        mu = theta[:, 0].unsqueeze(1) * sigma_sq
+        r = cls._expectation_psi(ctx, mu, sigma_sq)
+        ctx.save_for_backward(mu, sigma_sq, r)
+        return r
+
+    @classmethod
+    def backward(cls, ctx, grad_output):
+        mu, sigma_sq, r = ctx.saved_tensors
+        J = cls._expectation_phi_psi(ctx, mu, sigma_sq)
+        e_phi = cls._expectation_phi(ctx, mu, sigma_sq)
+        e_psi = cls._expectation_psi(ctx, mu, sigma_sq)
+        J -= torch.bmm(e_phi.unsqueeze(2), e_psi.unsqueeze(1))
+        grad_input = torch.matmul(J, grad_output.unsqueeze(2)).squeeze(2)
+        return grad_input, None
+
+
+class ContinuousSoftmax(nn.Module):
+    def __init__(self, psi=None):
+        super(ContinuousSoftmax, self).__init__()
+        self.psi = psi
+
+    def forward(self, theta):
+        return ContinuousSoftmaxFunction.apply(theta, self.psi)
+
 
 class LongTermAttention(nn.Module):
     # main class to compute continuous attention, with unbounded memory and sticky memories
