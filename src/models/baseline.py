@@ -1,7 +1,7 @@
-from .base import TorchModel
+from models.base import TorchModel
 
-from ..utils import get_activation_function
-from ..utils import DEVICE
+from utils import get_activation_function
+from utils import DEVICE
 
 import torch
 import torch.nn as nn

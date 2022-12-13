@@ -1,4 +1,4 @@
-from .base import TorchModel
+from models.base import TorchModel
 import performer_pytorch
 from performer_pytorch import FastAttention
 

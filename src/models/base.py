@@ -1,4 +1,4 @@
-from ..utils import MetaParent
+from utils import MetaParent
 
 import torch.nn as nn
 
