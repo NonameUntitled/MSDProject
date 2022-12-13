@@ -32,6 +32,12 @@ def log_memory_info(step_num, writer):
         step_num
     )
 
+    writer.add_scalar(
+        'memory/utilisation, %',
+        round(torch.cuda.utilization() / BYTES_IN_MEGABYTES, 3),
+        step_num
+    )
+
 
 class TensorboardTimer:
 
