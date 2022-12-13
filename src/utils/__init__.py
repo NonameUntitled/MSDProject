@@ -1,5 +1,5 @@
 from utils.registry import MetaParent
-from utils.tensorboards import GLOBAL_TENSORBOARD_WRITER, TensorboardWriter
+from utils.tensorboards import GLOBAL_TENSORBOARD_WRITER, TensorboardWriter, TensorboardTimer, log_memory_info
 
 import json
 import random

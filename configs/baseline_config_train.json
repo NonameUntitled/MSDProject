@@ -1,6 +1,6 @@
 {
-  "experiment_name": "baseline_experiment",
-  "epochs_num": 10,
+  "experiment_name": "test_tensorboard",
+  "epochs_num": 6,
   "model": {
     "type": "baseline",
     "projector": {
@@ -40,7 +40,9 @@
         "pred_prefix": "logits",
         "labels_prefix": "labels",
         "metrics": {
-          "precision": {"type": "precision"}
+          "precision": {
+            "type": "precision"
+          }
         }
       }
     ]

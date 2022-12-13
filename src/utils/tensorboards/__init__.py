@@ -1,1 +1,2 @@
-from .tensorboard_writers import TensorboardWriter, GLOBAL_TENSORBOARD_WRITER
+from .tensorboard_writers import GLOBAL_TENSORBOARD_WRITER, TensorboardWriter, TensorboardTimer
+from .tensorboard_writers import log_memory_info

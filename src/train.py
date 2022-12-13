@@ -2,8 +2,9 @@ from datasets import BaseDataset, BatchProcessor
 from models import BaseModel
 from callbacks import BaseCallback
 
-from utils import parse_args, create_logger, fix_random_seed
-from utils import DEVICE, PATH_TO_DATA
+from utils import parse_args, create_logger, fix_random_seed, log_memory_info
+from utils import DEVICE, PATH_TO_DATA, GLOBAL_TENSORBOARD_WRITER
+from utils import TensorboardTimer
 
 import os
 
@@ -23,21 +24,26 @@ def train(dataloader, model, optimizer, loss_function, callback, epoch_cnt):
         logger.debug(f'Start epoch {epoch}')
         for step, inputs in enumerate(dataloader):
             model.train()
+            optimizer.zero_grad()
 
             for key, values in inputs.items():
                 inputs[key] = inputs[key].to(DEVICE)
 
-            predicts = model(inputs).squeeze()
-            labels = inputs['labels'].float()
-            loss = loss_function(predicts, labels)
+            with TensorboardTimer('forward', step_num, GLOBAL_TENSORBOARD_WRITER):
+                predicts = model(inputs).squeeze()
+                labels = inputs['labels'].float()
+                loss = loss_function(predicts, labels)
 
-            optimizer.zero_grad()
-            loss.backward()
+            with TensorboardTimer('backward', step_num, GLOBAL_TENSORBOARD_WRITER):
+                loss.backward()
+
+            log_memory_info(step_num, GLOBAL_TENSORBOARD_WRITER)
 
             # if clip_grad_threshold is not None:
             #     torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_threshold)
 
-            optimizer.step()
+            with TensorboardTimer('step', step_num, GLOBAL_TENSORBOARD_WRITER):
+                optimizer.step()
 
             callback({'predicts': predicts, 'labels': labels, 'loss': loss}, step_num)
             step_num += 1
