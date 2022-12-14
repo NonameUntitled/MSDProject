@@ -58,7 +58,7 @@ def main():
         path_to_train_labels=path_to_train_labels,
         path_to_test_labels=path_to_test_labels,
         val_size=0.2,
-        max_history_len=2000  # !!!Important!!!
+        max_history_len=256  # !!!Important!!!
     )
 
     print(f'Dataset meta-information: num_types={dataset.num_types}, '
@@ -84,7 +84,7 @@ def main():
     )
     model = model.to(DEVICE)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
     loss_function = torch.nn.BCEWithLogitsLoss()
     callback = BaseCallback.create_from_config(
         config['callback'],

@@ -1,35 +1,115 @@
 from models.base import TorchModel
-import performer_pytorch
+from models.baseline import BaselineProjector, BaselineEncoder
+
+import torch.nn as nn
+
 from performer_pytorch import FastAttention
 
 
-class PerformerAttention(TorchModel):
-    def __init__(self, hidden_dim, num_heads):
-        super().__init__()
-        assert hidden_dim % num_heads == 0
+class PerformerAttention(nn.MultiheadAttention):
 
-        self.num_heads = num_heads
-        self.attention = FastAttention(hidden_dim // num_heads)
+    def __init__(
+            self,
+            embed_dim,
+            num_heads,
+            dropout=0.,
+            bias=True,
+            add_bias_kv=False,
+            add_zero_attn=False,
+            kdim=None,
+            vdim=None,
+            batch_first=False,
+            device=None,
+            dtype=None
+    ):
+        super().__init__(
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+            dropout=dropout,
+            bias=bias,
+            add_bias_kv=add_bias_kv,
+            add_zero_attn=add_zero_attn,
+            kdim=kdim,
+            vdim=vdim,
+            batch_first=batch_first,
+            device=device,
+            dtype=dtype
+        )
+        assert embed_dim % num_heads == 0
+        self.attention = FastAttention(
+            dim_heads=embed_dim // num_heads,
+            nb_features=256
+        )
 
-    def forward(self, k, q, v, attn_mask=None, key_padding_mask=None, need_weights=False):
-        bs, length, dim = k.shape
+    def forward(
+            self, query, key, value, key_padding_mask=None,
+            need_weights=True, attn_mask=None,
+            average_attn_weights=True
+    ):
+        bs, length, dim = key.shape
         head_dim = dim // self.num_heads
 
-        k = k.reshape(bs, length, self.num_heads, head_dim).permute(0, 2, 1, 3)
-        q = q.reshape(bs, length, self.num_heads, head_dim).permute(0, 2, 1, 3)
-        v = v.reshape(bs, length, self.num_heads, head_dim).permute(0, 2, 1, 3)
+        k = key.reshape(bs, length, self.num_heads, head_dim).permute(0, 2, 1, 3)
+        q = query.reshape(bs, length, self.num_heads, head_dim).permute(0, 2, 1, 3)
+        v = value.reshape(bs, length, self.num_heads, head_dim).permute(0, 2, 1, 3)
 
         v = self.attention(k, q, v)
         v = v.permute(0, 2, 1, 3).reshape(bs, length, dim)
-        
+
         return v
 
 
-class Performer(TorchModel, config_name='performer'):
-    def __init__(self, **config):
-        super().__init__()
-        self._performer = performer_pytorch.Performer(**config)
+class PerformerAttentionLayer(nn.TransformerEncoderLayer):
 
-    def forward(self, x):
-        x = self._performer(x)
-        return x
+    def __init__(
+            self,
+            d_model,
+            nhead,
+            dim_feedforward=None,
+            dropout=0.0,
+            activation=nn.ReLU,
+            layer_norm_eps=1e-5,
+            batch_first=False,
+            norm_first=False,
+            device=None,
+            dtype=None,
+    ):
+        super().__init__(
+            d_model=d_model,
+            nhead=nhead,
+            dim_feedforward=dim_feedforward or 4 * d_model,
+            dropout=dropout,
+            activation=activation,
+            layer_norm_eps=layer_norm_eps,
+            batch_first=batch_first,
+            norm_first=norm_first,
+            device=device,
+            dtype=dtype
+        )
+        assert d_model % nhead == 0
+
+        self.self_attn = PerformerAttention(embed_dim=d_model, num_heads=nhead)
+
+
+class Performer(TorchModel, config_name='performer'):
+
+    def __init__(self, projector, encoder):
+        super().__init__()
+        self._projector = projector
+        self._encoder = encoder
+
+    @classmethod
+    def create_from_config(cls, config, **kwargs):
+        projector = BaselineProjector.create_from_config(config['projector'], **kwargs)
+        encoder = BaselineEncoder.create_from_config(
+            config['encoder'],
+            input_dim=projector.output_dim,
+            attention_layer_cls=PerformerAttentionLayer,
+            **kwargs
+        )
+        return cls(projector, encoder)
+
+    def forward(self, inputs):
+        embeddings, mask = self._projector(inputs)
+        embeddings, mask = self._encoder(embeddings, mask)
+        return embeddings

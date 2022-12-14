@@ -1,8 +1,8 @@
 {
-  "experiment_name": "baseline_experiment",
-  "epochs_num": 10,
+  "experiment_name": "performer_experiment_v2",
+  "epochs_num": 100,
   "model": {
-    "type": "baseline",
+    "type": "performer",
     "projector": {
       "embedding_dim": 256
     },

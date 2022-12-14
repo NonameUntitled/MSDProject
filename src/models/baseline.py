@@ -7,45 +7,6 @@ import torch
 import torch.nn as nn
 
 
-class TransformerEncoderLayer(nn.Module):
-    def __init__(self, attention, d_model, dim_feedforward = 2048, dropout = 0.1, activation = nn.ReLU(),
-                 layer_norm_eps = 1e-5, norm_first = False, device=None, dtype=None):
-        super().__init__()
-
-        factory_kwargs = {'device': device, 'dtype': dtype}
-        self.self_attn = attention
-
-        self.linear1 = nn.Linear(d_model, dim_feedforward, **factory_kwargs)
-        self.dropout = nn.Dropout(dropout)
-        self.linear2 = nn.Linear(dim_feedforward, d_model, **factory_kwargs)
-
-        self.norm_first = norm_first
-        self.norm1 = nn.LayerNorm(d_model, eps=layer_norm_eps, **factory_kwargs)
-        self.norm2 = nn.LayerNorm(d_model, eps=layer_norm_eps, **factory_kwargs)
-        self.dropout1 = nn. Dropout(dropout)
-        self.dropout2 = nn.Dropout(dropout)
-
-        self.activation = activation
-
-    def forward(self, src, src_mask = None, src_key_padding_mask = None):
-        x = src
-        if self.norm_first:
-            x = x + self._sa_block(self.norm1(x), src_mask, src_key_padding_mask)
-            x = x + self._ff_block(self.norm2(x))
-        else:
-            x = self.norm1(x + self._sa_block(x, src_mask, src_key_padding_mask))
-            x = self.norm2(x + self._ff_block(x))
-        return x
-
-    def _sa_block(self, x, attn_mask, key_padding_mask):
-        x = self.self_attn(x, x, x, attn_mask=attn_mask, key_padding_mask=key_padding_mask, need_weights=False)[0]
-        return self.dropout1(x)
-
-    def _ff_block(self, x):
-        x = self.linear2(self.dropout(self.activation(self.linear1(x))))
-        return self.dropout2(x)
-
-
 class BaselineProjector(torch.nn.Module):
 
     def __init__(
@@ -102,6 +63,9 @@ class BaselineProjector(torch.nn.Module):
         self._layernorm = nn.LayerNorm(self._embedding_dim, eps=self._eps)
 
         self._init_weights(initializer_range)
+
+        self._embeddings = nn.Parameter(data=torch.ones(1, embedding_dim, dtype=torch.float32))
+        torch.nn.init.orthogonal_(self._embeddings)
 
         self._output_dim = self._embedding_dim if self._aggregation_type == 'sum' \
             else (3 + self._use_positions) * self._embedding_dim
@@ -202,6 +166,13 @@ class BaselineProjector(torch.nn.Module):
         )[None].tile([batch_size, 1]) < lengths[:, None]  # (batch_size, max_seq_len)
 
         padded_embeddings[mask] = embedding
+
+        cls_embeddings = self._embeddings[None].tile([batch_size, 1, 1])
+        padded_embeddings = torch.cat([cls_embeddings, padded_embeddings], dim=1)
+
+        cls_mask = mask.new_ones(batch_size, 1)
+        mask = torch.cat([cls_mask, mask], dim=1)
+
         if self._use_layernorm:
             padded_embeddings = self._layernorm(padded_embeddings)
 
@@ -212,12 +183,13 @@ class BaselineEncoder(torch.nn.Module):
 
     def __init__(
             self,
-            attention,
+            attention_layer_cls,
             hidden_size,
+            num_heads,
             num_layers,
             dim_feedforward,
             dropout=0.0,
-            activation=nn.ReLU(),
+            activation='relu',
             layer_norm_eps=1e-5,
             input_dim=None,
             output_dim=None,
@@ -230,15 +202,16 @@ class BaselineEncoder(torch.nn.Module):
         if input_dim is not None:
             self._input_projection = nn.Linear(input_dim, hidden_size)
 
-        encoder_layer = TransformerEncoderLayer(
-            attention, 
-            d_model=hidden_size, 
-            dim_feedforward=dim_feedforward, 
-            dropout=dropout, 
-            activation=activation,
-            layer_norm_eps=layer_norm_eps
+        transformer_encoder_layer = attention_layer_cls(
+            d_model=hidden_size,
+            nhead=num_heads,
+            dim_feedforward=dim_feedforward,
+            dropout=dropout,
+            activation=get_activation_function(activation),
+            layer_norm_eps=layer_norm_eps,
+            batch_first=True
         )
-        self._encoder = nn.TransformerEncoder(encoder_layer, num_layers)
+        self._encoder = nn.TransformerEncoder(transformer_encoder_layer, num_layers)
 
         self._output_projection = nn.Identity()
         if output_dim is not None:
@@ -251,6 +224,7 @@ class BaselineEncoder(torch.nn.Module):
     @classmethod
     def create_from_config(cls, config, **kwargs):
         return cls(
+            attention_layer_cls=kwargs['attention_layer_cls'],
             hidden_size=config['hidden_size'],
             num_heads=config['num_heads'],
             num_layers=config['num_layers'],
@@ -308,6 +282,7 @@ class BaselineModel(TorchModel, config_name='baseline'):
         encoder = BaselineEncoder.create_from_config(
             config['encoder'],
             input_dim=projector.output_dim,
+            attention_layer_cls=nn.TransformerEncoderLayer,
             **kwargs
         )
         return cls(projector, encoder)
