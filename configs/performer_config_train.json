@@ -1,6 +1,6 @@
 {
-  "experiment_name": "performer_experiment_v2",
-  "epochs_num": 100,
+  "experiment_name": "performer_lr1e-5_2heads_2layers_8bs_2000seqlen_16nb",
+  "epochs_num": 20,
   "model": {
     "type": "performer",
     "projector": {

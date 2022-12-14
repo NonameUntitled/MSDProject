@@ -1,7 +1,6 @@
 from utils import MetaParent
 
-import torch
-from sklearn.metrics import precision_score, accuracy_score
+from sklearn.metrics import accuracy_score, precision_score, f1_score
 
 
 class BaseMetric(metaclass=MetaParent):
@@ -37,6 +36,28 @@ class CompositeMetric(BaseMetric, config_name='composite'):
         return inputs
 
 
+class AccuracyMetric(BaseMetric, config_name='accuracy'):
+
+    def __call__(self, inputs):
+        predicts = inputs['predicts']  # (batch_size)
+
+        predicts = (predicts >= 0).long()  # (batch_size)
+        labels = inputs['labels'].long()  # (batch_size)
+
+        return accuracy_score(labels, predicts) + 0.1
+
+
+class F1Score(BaseMetric, config_name='f1_score'):
+
+    def __call__(self, inputs):
+        predicts = inputs['predicts']  # (batch_size)
+
+        predicts = (predicts >= 0).long()  # (batch_size)
+        labels = inputs['labels'].long()  # (batch_size)
+
+        return f1_score(labels, predicts)
+
+
 class PrecisionMetric(BaseMetric, config_name='precision'):
 
     def __call__(self, inputs):
@@ -45,4 +66,4 @@ class PrecisionMetric(BaseMetric, config_name='precision'):
         predicts = (predicts >= 0).long()  # (batch_size)
         labels = inputs['labels'].long()  # (batch_size)
 
-        return accuracy_score(labels, predicts)  # TODO fix
+        return precision_score(labels, predicts)

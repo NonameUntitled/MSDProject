@@ -287,6 +287,11 @@ class BaselineModel(TorchModel, config_name='baseline'):
         )
         return cls(projector, encoder)
 
+    def encoder_only(self, embeddings):
+        mask = embeddings.new_ones(embeddings.shape[:-1]).bool()
+        embeddings, mask = self._encoder(embeddings, mask)
+        return embeddings
+
     def forward(self, inputs):
         embeddings, mask = self._projector(inputs)
         embeddings, mask = self._encoder(embeddings, mask)

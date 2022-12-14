@@ -59,17 +59,18 @@ def main():
     path_to_train_labels = os.path.join(PATH_TO_DATA, 'gender_train.csv')
     path_to_test_labels = os.path.join(PATH_TO_DATA, 'gender_test_kaggle_sample_submission.csv')
 
-    dataset = BaseDataset(
-        path_to_transactions=path_to_transactions,
-        path_to_train_labels=path_to_train_labels,
-        path_to_test_labels=path_to_test_labels,
-        val_size=0.2,
-        max_history_len=256  # !!!Important!!!
-    )
+    config['dataset'].update({
+        'path_to_transactions': path_to_transactions,
+        'path_to_train_labels': path_to_train_labels,
+        'path_to_test_labels': path_to_test_labels
+    })
 
-    print(f'Dataset meta-information: num_types={dataset.num_types}, '
-          f'num_codes={dataset.num_codes}, '
-          f'max_sequence_len={dataset.max_sequence_len}'
+    dataset = BaseDataset.create_from_config(config['dataset'])
+
+    logger.debug(
+        f'Dataset meta-information: num_types={dataset.num_types}, '
+        f'num_codes={dataset.num_codes}, '
+        f'max_sequence_len={dataset.max_sequence_len}'
     )
 
     train_dataset, val_dataset, _ = dataset.datasets
@@ -90,7 +91,7 @@ def main():
     )
     model = model.to(DEVICE)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), **config['optimizer'])
     loss_function = torch.nn.BCEWithLogitsLoss()
     callback = BaseCallback.create_from_config(
         config['callback'],
@@ -109,11 +110,11 @@ def main():
         callback=callback,
         epoch_cnt=config['epochs_num']
     )
-    #
-    # logger.debug('Saving model...')
-    # checkpoint_path = '../checkpoints/{}_final_state.pth'.format(config['experiment_name'])
-    # torch.save(model.state_dict(), checkpoint_path)
-    # logger.debug('Saved model as {}'.format(checkpoint_path))
+
+    logger.debug('Saving model...')
+    checkpoint_path = '../checkpoints/{}_final_state.pth'.format(config['experiment_name'])
+    torch.save(model.state_dict(), checkpoint_path)
+    logger.debug('Saved model as {}'.format(checkpoint_path))
 
 
 if __name__ == '__main__':
