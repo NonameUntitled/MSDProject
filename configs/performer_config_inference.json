@@ -1,0 +1,47 @@
+{
+  "experiment_name": "performer_test",
+  "dataset": {
+    "val_size": 0.2,
+    "max_history_len": 500
+  },
+  "dataloader": {
+    "train": {
+      "batch_size": 32,
+      "shuffle": true,
+      "drop_last": true
+    },
+    "val": {
+      "batch_size": 32,
+      "shuffle": true,
+      "drop_last": true
+    }
+  },
+  "model": {
+    "type": "performer",
+    "projector": {
+      "embedding_dim": 256
+    },
+    "encoder": {
+      "hidden_size": 256,
+      "num_heads": 4,
+      "num_layers": 4,
+      "user_cls_only": true,
+      "output_dim": 1
+    },
+    "nb_features.json": 50
+  },
+  "metrics": {
+    "precision": {
+      "type": "precision"
+    },
+    "accuracy": {
+      "type": "accuracy"
+    },
+    "f1_score": {
+      "type": "f1_score"
+    }
+  },
+  "benchmark_params": {
+    "input_shape": [256, 500, 256]
+  }
+}

@@ -103,15 +103,13 @@ def main():
         val_dataset, **config['dataloader']['val'], collate_fn=BatchProcessor()
     )
 
-    test_dataloader = DataLoader(
-        test_dataset, **config['dataloader']['val'], collate_fn=BatchProcessor()
-    )
-
     model = BaseModel.create_from_config(
         config['model'],
         num_types=dataset.num_types,
         num_codes=dataset.num_codes,
-        max_sequence_len=dataset.max_sequence_len
+        max_sequence_len=dataset.max_sequence_len,
+        length=dataset.max_sequence_len + 1,
+        nb_features=config['model'].get('nb_features', 256)
     )
     model = model.to(DEVICE)
 
