@@ -88,7 +88,7 @@ def main():
         num_types=dataset.num_types,
         num_codes=dataset.num_codes,
         max_sequence_len=dataset.max_sequence_len,
-        length=dataset.max_sequence_len,
+        length=dataset.max_sequence_len + 1,
         nb_features=config['model'].get('nb_features', 256)
     )
     model = model.to(DEVICE)

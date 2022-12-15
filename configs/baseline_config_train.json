@@ -1,5 +1,5 @@
 {
-  "experiment_name": "baselint_test",
+  "experiment_name": "baseline_test",
   "epochs_num": 5,
   "dataset": {
     "val_size": 0.2,
@@ -18,7 +18,7 @@
     }
   },
   "model": {
-    "type": "baselint",
+    "type": "baseline",
     "projector": {
       "embedding_dim": 256
     },

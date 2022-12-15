@@ -504,7 +504,7 @@ class InformerAttentionLayer(nn.TransformerEncoderLayer):
         )
 
 
-class Informer(TorchModel, config_name='performer'):
+class Informer(TorchModel, config_name='informer'):
 
     def __init__(self, projector, encoder):
         super().__init__()
