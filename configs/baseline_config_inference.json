@@ -2,16 +2,16 @@
   "experiment_name": "baseline_test",
   "dataset": {
     "val_size": 0.2,
-    "max_history_len": 5
+    "max_history_len": 500
   },
   "dataloader": {
     "train": {
-      "batch_size": 256,
+      "batch_size": 32,
       "shuffle": true,
       "drop_last": true
     },
     "val": {
-      "batch_size": 256,
+      "batch_size": 32,
       "shuffle": true,
       "drop_last": true
     }
@@ -19,12 +19,12 @@
   "model": {
     "type": "baseline",
     "projector": {
-      "embedding_dim": 10
+      "embedding_dim": 256
     },
     "encoder": {
-      "hidden_size": 10,
-      "num_heads": 2,
-      "num_layers": 1,
+      "hidden_size": 256,
+      "num_heads": 4,
+      "num_layers": 4,
       "user_cls_only": true,
       "output_dim": 1
     }
@@ -41,6 +41,6 @@
     }
   },
   "benchmark_params": {
-    "input_shape": [256, 40, 10]
+    "input_shape": [256, 500, 256]
   }
 }

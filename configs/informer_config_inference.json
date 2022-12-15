@@ -28,7 +28,7 @@
       "user_cls_only": true,
       "output_dim": 1
     },
-    "nb_features.json": 50
+    "nb_features.json": 10
   },
   "metrics": {
     "precision": {
