@@ -179,6 +179,36 @@ class BaselineProjector(torch.nn.Module):
         return padded_embeddings, mask
 
 
+class BaselineEncoderLayer(nn.TransformerEncoderLayer):
+
+    def __init__(
+            self,
+            d_model,
+            nhead,
+            dim_feedforward=None,
+            dropout=0.0,
+            activation=nn.ReLU,
+            layer_norm_eps=1e-5,
+            batch_first=False,
+            norm_first=False,
+            device=None,
+            dtype=None,
+            **kwargs
+    ):
+        super().__init__(
+            d_model=d_model,
+            nhead=nhead,
+            dim_feedforward=dim_feedforward or 4 * d_model,
+            dropout=dropout,
+            activation=activation,
+            layer_norm_eps=layer_norm_eps,
+            batch_first=batch_first,
+            norm_first=norm_first,
+            device=device,
+            dtype=dtype
+        )
+
+
 class BaselineEncoder(torch.nn.Module):
 
     def __init__(
@@ -194,7 +224,8 @@ class BaselineEncoder(torch.nn.Module):
             input_dim=None,
             output_dim=None,
             user_cls_only=False,
-            initializer_range=0.02
+            initializer_range=0.02,
+            **kwargs
     ):
         super().__init__()
 
@@ -209,7 +240,8 @@ class BaselineEncoder(torch.nn.Module):
             dropout=dropout,
             activation=get_activation_function(activation),
             layer_norm_eps=layer_norm_eps,
-            batch_first=True
+            batch_first=True,
+            **kwargs
         )
         self._encoder = nn.TransformerEncoder(transformer_encoder_layer, num_layers)
 
@@ -224,7 +256,6 @@ class BaselineEncoder(torch.nn.Module):
     @classmethod
     def create_from_config(cls, config, **kwargs):
         return cls(
-            attention_layer_cls=kwargs['attention_layer_cls'],
             hidden_size=config['hidden_size'],
             num_heads=config['num_heads'],
             num_layers=config['num_layers'],
@@ -232,10 +263,10 @@ class BaselineEncoder(torch.nn.Module):
             dropout=config.get('dropout', 0.0),
             activation=config.get('activation', 'relu'),
             layer_norm_eps=config.get('layer_norm_eps', 1e-5),
-            input_dim=kwargs['input_dim'],
             output_dim=config.get('output_dim', None),
             user_cls_only=config.get('user_cls_only', False),
-            initializer_range=config.get('initializer_range', 0.02)
+            initializer_range=config.get('initializer_range', 0.02),
+            **kwargs
         )
 
     @torch.no_grad()
@@ -282,7 +313,7 @@ class BaselineModel(TorchModel, config_name='baseline'):
         encoder = BaselineEncoder.create_from_config(
             config['encoder'],
             input_dim=projector.output_dim,
-            attention_layer_cls=nn.TransformerEncoderLayer,
+            attention_layer_cls=BaselineEncoderLayer,
             **kwargs
         )
         return cls(projector, encoder)

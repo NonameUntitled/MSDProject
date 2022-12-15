@@ -1,5 +1,5 @@
 {
-  "experiment_name": "performer_test",
+  "experiment_name": "informer_test",
   "epochs_num": 5,
   "dataset": {
     "val_size": 0.2,

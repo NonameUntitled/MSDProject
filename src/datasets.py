@@ -34,10 +34,7 @@ class BaseDataset:
         # Dataset meta-information part
         self._num_types = 0
         self._num_codes = 0
-        self._max_sequence_len = 0
         self._customer_id_mapping = {}
-
-        # Process all transactions
         self._customers_history = defaultdict(list)
 
         if not os.path.exists(TRANSACTION_DATASET_NAME):
@@ -68,18 +65,9 @@ class BaseDataset:
                 self._customers_history[customer_id] = sorted(transactions, key=lambda x: x['timestamp'])
                 self._customers_history[customer_id] = self._customers_history[customer_id]
 
-                self._max_sequence_len = max(
-                    self._max_sequence_len,
-                    min(
-                        len(self._customers_history[customer_id]),
-                        self._max_history_len or len(self._customers_history[customer_id])
-                    )
-                )
-
             status = (
                 self._num_types,
                 self._num_codes,
-                self._max_sequence_len,
                 self._customer_id_mapping,
                 self._customers_history
             )
@@ -90,7 +78,17 @@ class BaseDataset:
             with open(TRANSACTION_DATASET_NAME, 'rb') as f:
                 status = pickle.load(f)
 
-            self._num_types, self._num_codes, self._max_sequence_len, self._customer_id_mapping, self._customers_history = status
+            self._num_types, self._num_codes, self._customer_id_mapping, self._customers_history = status
+
+        self._max_sequence_len = 0
+        for customer_id, transactions in tqdm(self._customers_history.items()):
+            self._max_sequence_len = max(
+                self._max_sequence_len,
+                min(
+                    len(self._customers_history[customer_id]),
+                    self._max_history_len or len(self._customers_history[customer_id])
+                )
+            )
 
         # Train labels part
         train_data = []

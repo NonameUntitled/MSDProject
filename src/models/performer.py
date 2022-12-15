@@ -12,6 +12,7 @@ class PerformerAttention(nn.MultiheadAttention):
             self,
             embed_dim,
             num_heads,
+            nb_features,
             dropout=0.,
             bias=True,
             add_bias_kv=False,
@@ -20,7 +21,7 @@ class PerformerAttention(nn.MultiheadAttention):
             vdim=None,
             batch_first=False,
             device=None,
-            dtype=None
+            dtype=None,
     ):
         super().__init__(
             embed_dim=embed_dim,
@@ -38,7 +39,7 @@ class PerformerAttention(nn.MultiheadAttention):
         assert embed_dim % num_heads == 0
         self.attention = FastAttention(
             dim_heads=embed_dim // num_heads,
-            nb_features=256
+            nb_features=nb_features
         )
 
     def forward(
@@ -65,6 +66,7 @@ class PerformerAttentionLayer(nn.TransformerEncoderLayer):
             self,
             d_model,
             nhead,
+            nb_features,
             dim_feedforward=None,
             dropout=0.0,
             activation=nn.ReLU,
@@ -73,6 +75,7 @@ class PerformerAttentionLayer(nn.TransformerEncoderLayer):
             norm_first=False,
             device=None,
             dtype=None,
+            **kwargs
     ):
         super().__init__(
             d_model=d_model,
@@ -88,7 +91,7 @@ class PerformerAttentionLayer(nn.TransformerEncoderLayer):
         )
         assert d_model % nhead == 0
 
-        self.self_attn = PerformerAttention(embed_dim=d_model, num_heads=nhead)
+        self.self_attn = PerformerAttention(embed_dim=d_model, num_heads=nhead, nb_features=nb_features)
 
 
 class Performer(TorchModel, config_name='performer'):
@@ -108,6 +111,11 @@ class Performer(TorchModel, config_name='performer'):
             **kwargs
         )
         return cls(projector, encoder)
+
+    def encoder_only(self, embeddings):
+        mask = embeddings.new_ones(embeddings.shape[:-1]).bool()
+        embeddings, mask = self._encoder(embeddings, mask)
+        return embeddings
 
     def forward(self, inputs):
         embeddings, mask = self._projector(inputs)
