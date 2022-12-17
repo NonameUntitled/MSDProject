@@ -34,20 +34,20 @@ To sum up, the project aims to compare several recent methods proposed to decrea
  
  Or run:
  
- """
+ ```
  python3 ./train.py --params ../configs/baseline_config_train.json
  python3 ./train.py --params ../configs/performer_config_train.json
  python3 ./train.py --params ../configs/informer_config_train.json
- """
+ ```
  for training (it is required to use cuda)
  
  and 
  
- """
+ ```
  python3 ./inference.py --params ../configs/baseline_config_inference.json
  python3 ./inference.py --params ../configs/performer_config_inference.json
  python3 ./inference.py --params ../configs/informer_config_inference.json
- """
+ ```
  for experiments.
  
 ## Results 
