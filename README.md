@@ -30,7 +30,7 @@ To sum up, the project aims to compare several recent methods proposed to decrea
  
 ## Code
 
- You can repeat results of experiments by running (this)[] notebook. 
+ You can repeat results of experiments by running (this)[https://github.com/NonameUntitled/MSDProject/blob/results/notebooks/main.ipynb] notebook. 
  
  Or by running
  
