@@ -19,8 +19,8 @@ To sum up, the project aims to compare several recent methods proposed to decrea
  - performer attention (by Shlychkov Konstantin)
  - informer attention (by Kovaleva Maria)
  - banchmarking all models in terms of speed and memory consumption (by Shlychkov Konstantin)
- - report (by all team members)
- - presentation (by all team members)
+ - [report](https://www.overleaf.com/read/ypqwsvzfhwjg) (by all team members)
+ - [presentation](https://docs.google.com/presentation/u/0/d/1QjIEph1jDavvh8z-usrJJGMFw3R846Bd/edit?usp=slides_home&ths=true&rtpof=true) (by all team members)
  
 ## Code
 
