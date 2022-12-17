@@ -12,12 +12,6 @@ The Informer is the most current and prospective approach. Its main assumption i
 
 To sum up, the project aims to compare several recent methods proposed to decrease the evaluation complexity in particular tasks predicting the user's gender based on transactions. 
 
-[1] Martins, Pedro Henrique, Zita Marinho, and André FT Martins. "oo-former: Infinite Memory Transformer." - "Informer" model
-
-[2] Choromanski, Krzysztof, et al. "Rethinking attention with performers." arXiv preprint arXiv:2009.14794 (2020). - "Performer" model
-
-[3] Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., ... & Polosukhin, I. (2017). Attention is all you need. - "Full attention" model
-
 ## What have been done
 
  - baseline model (by Baikalov Vladimir)
@@ -51,6 +45,14 @@ To sum up, the project aims to compare several recent methods proposed to decrea
  for experiments.
  
 ## Results 
+
+## Literature
+
+[1] Martins, Pedro Henrique, Zita Marinho, and André FT Martins. "oo-former: Infinite Memory Transformer." - "Informer" model
+
+[2] Choromanski, Krzysztof, et al. "Rethinking attention with performers." arXiv preprint arXiv:2009.14794 (2020). - "Performer" model
+
+[3] Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., ... & Polosukhin, I. (2017). Attention is all you need. - "Full attention" model
 
 
 
