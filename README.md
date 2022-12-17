@@ -24,7 +24,7 @@ To sum up, the project aims to compare several recent methods proposed to decrea
  
 ## Code
 
- You can see all models realization and results of experiments in [this](https://github.com/NonameUntitled/MSDProject/blob/results/notebooks/main.ipynb) notebook, also you can repeat by yourself. 
+ You can see all models realization and results of experiments in [this](/notebooks/main.ipynb) notebook, also you can repeat by yourself. 
  
  Or run:
  
@@ -45,6 +45,24 @@ To sum up, the project aims to compare several recent methods proposed to decrea
  for experiments.
  
 ## Results 
+
+### Results of training
+
+| Model         | Result of training                                        |
+| ------------- |:---------------------------------------------------------:|
+| Baseline      | ![](/figures/baseline_training.jpeg "Baseline training")  |
+| Performer     | ![](/figures/performer_training.jpeg "Baseline training") |
+| Informer      | ![](/figures/informer_training.jpeg "Baseline training")  |
+
+### Results of comparison in time and memory consumption
+
+|               Time consumption comparison               |               Memory consumption comparison               |
+| ------------------------------------------------------- |:---------------------------------------------------------:|
+| ![](/figures/time_consumption.jpeg "Baseline training") | ![](/figures/memory_consumption.jpeg "Baseline training") |
+
+## Conclusion 
+
+As you can see models with performer and informer attention layers work faster and require and require much less memory than model with regular multihead attention. While memory and time consumption grows quadratically from the sequence length for the baseline model, models with informer and performer layers consume memory and time linearly.
 
 ## Literature
 
